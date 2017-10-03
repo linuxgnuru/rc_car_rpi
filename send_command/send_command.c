@@ -34,9 +34,13 @@ void showResult(int u_res, _Bool printResult);
 
 int convert_cmd(int cmd);
 
+int conv_u(int cm);
+
 int main(int argc, char **argv)
 {
     int cmd_ = -1;
+    int u_cmd;
+    //int t_cmd;
 
     // note: we're assuming BSD-style reliable signals here
     (void)signal(SIGINT, die);
@@ -79,8 +83,35 @@ int main(int argc, char **argv)
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, ADDRESS);
         exit(1);
     }
-    //if (sendCommand(GET_DIR) != CENTER_) sendCommand(GO_CENTER);
-    showResult(sendCommand(cmd_), 0);
+    if (cmd_ > 4 && cmd_ < 8)
+    {
+        //printf("cmd_: %d\n", cmd_);
+        u_cmd = convert_cmd(cmd_);
+        switch (u_cmd)
+        {
+            case GO_RIGHT:
+                while (sendCommand(GO_RIGHT) != FAR_RIGHT_)
+                    ;
+                break;
+            case GO_CENTER:
+                while (sendCommand(GO_CENTER) != CENTER_)
+                    ;
+                break;
+            case GO_LEFT:
+                while (sendCommand(GO_LEFT) != FAR_LEFT_)
+                    ;
+                break;
+            default:
+                //printf("default - %d\n", u_cmd);
+                break;
+        }
+        //printf("%d\n", u_cmd);
+    }
+    else
+    {
+        u_cmd = convert_cmd(cmd_);
+        showResult(sendCommand(u_cmd), 0);
+    }
     close(i2c_file);
     return EXIT_SUCCESS;
 } // end main
@@ -91,35 +122,28 @@ int sendCommand(int u_cmd)
     int ret = -1;
     int rs_w = 1;
     int rs_r = 1;
-    _Bool cw = TRUE;
-    _Bool cr = TRUE;
 
-    cmd[0] = convert_cmd(u_cmd);
-    showCmd(cmd[0], TRUE);
+    //cmd[0] = convert_cmd(u_cmd);
+    cmd[0] = u_cmd;
+    //showCmd(cmd[0], TRUE);
     // FIXME XXX TODO XXX FIXME
     // WTF!!  WHY IS THIS XXX IN A WHILE LOOP?!?!?!?!?!
-    while (cw)
+    while (1)
     {
         rs_w = write(i2c_file, cmd, 1);
         if (rs_w == 1)
-        {
-            //cw = FALSE;
             break;
-        }
-    } // end while (cw)
+    } // end while (1)
     usleep(10000);
     if (rs_w == 1)
     {
         char buf[1];
-        while (cr)
+        while (1)
         {
             rs_r = read(i2c_file, buf, 1);
             if (rs_r == 1)
-            {
-                //cr = FALSE;
                 break;
-            }
-        } // end while (cr)
+        } // end while (1)
         if (rs_r == 1)
         {
             ret = (int)buf[0];
@@ -128,17 +152,16 @@ int sendCommand(int u_cmd)
         {
             printf("failed to read from the i2c bus.\n");
             printf("length: %d\n", rs_r);
-            //showResult((int)buf[0], FALSE);
         }
         // now wait else you could crash the arduino by sending requests too fast
-        usleep(MAX_WAIT);
+        //usleep(MAX_WAIT);
     }
     else
     {
         printf("failed to write to the i2c bus.\n");
         printf("length: %d\n", rs_w);
     }
-    usleep(MAX_WAIT); // is this needed?
+    //usleep(MAX_WAIT); // is this needed?
     return ret;
 }
 
@@ -217,8 +240,8 @@ int convert_cmd(int cmd)
         case 3: r = CHECK_SONAR_RIGHT; break;
         case 4: r = CHECK_SONAR_REAR; break;
         case 5: r = GO_RIGHT; break;
-        case 6: r = GO_LEFT; break;
-        case 7: r = GO_CENTER; break;
+        case 6: r = GO_CENTER; break;
+        case 7: r = GO_LEFT; break;
         case 8: r = GET_DIR; break;
         default: r = BAD_; break;
     }
@@ -249,5 +272,19 @@ void showResult(int u_res, _Bool printResult)
         case REMOTE_POWER: printf("remote power\n"); break;
         default: printf("unknown [%d]\n", u_res); break;
     } // end switch
+}
+
+int conv_u(int cm)
+{
+    int ret = BAD_;
+
+    switch (cm)
+    {
+        case GO_RIGHT: ret = FAR_RIGHT_; break;
+        case GO_CENTER: ret = CENTER_; break;
+        case GO_LEFT: ret = FAR_LEFT_; break;
+        default: printf("\n-def--\n"); ret = cm; break;
+    }
+    return ret;
 }
 
