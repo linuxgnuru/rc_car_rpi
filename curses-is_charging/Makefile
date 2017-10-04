@@ -1,4 +1,4 @@
-PROGNAME = is_charging-curses
+PROGNAME = curses-is_charging
 
 all: clean $(PROGNAME)
 
