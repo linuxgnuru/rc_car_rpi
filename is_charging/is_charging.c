@@ -31,12 +31,6 @@ int i2c_file;
 
 void TTE();
 
-_Bool checkRoot()
-{
-    uid_t uid = getuid(), euid = geteuid();
-    return (uid != 0 || uid != euid);
-}
-
 static void die(int sig)
 {
     close(i2c_file);
@@ -55,12 +49,6 @@ int main(int argc, char **argv)
     (void)signal(SIGTERM, die);
     (void)signal(SIGABRT, die);
 
-    if (checkRoot())
-    {
-        printf("invalid credentials\n");
-        printf("sudo %s\n", argv[0]);
-        return EXIT_FAILURE;
-    }
     if ((i2c_file = open(devName, O_RDWR)) < 0)
     {
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to access %s\n", __LINE__, __FILE__, __func__, devName);
@@ -71,7 +59,7 @@ int main(int argc, char **argv)
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, NSE_ADDRESS);
         exit(1);
     }
-    printf("I2C: Acquiring bus to 0x%x\n", NSE_ADDRESS);
+    //printf("I2C: Acquiring bus to 0x%x\n", NSE_ADDRESS);
     TTE();
     TTE();
     if (charging)

@@ -31,27 +31,29 @@ typedef enum {
   REMOTE_FORWARD,     // 21
   REMOTE_BACKWARD,    // 22
   REMOTE_STOP,        // 23
-  REMOTE_POWER        // 24
+  REMOTE_POWER,       // 24
+
+  VOLTAGE,            // 25
+  CURRENT,            // 26
+  PERCENTAGE,         // 27
+  TEMPERATURE,        // 28
+
+  MOVE_F,             // 29
+  MOVE_B,             // 30
+  MOVE_R,             // 31
+  MOVE_L,             // 32
+
+  LED_BLUE_B,         // 33
+  LED_BLUE_S,         // 34
+  LED_GREEN_B,        // 35
+  LED_GREEN_S,        // 36
+  LED_YELLOW_B,       // 37
+  LED_YELLOW_S,       // 38
+  LED_RED_S,          // 39
+  LED_RED_B           // 40
 } my_enum;
 
-typedef enum {
-  MOVE_F,
-  MOVE_B,
-  MOVE_R,
-  MOVE_L
-} move_enum;
-
-typedef enum {
-  LED_BLUE_B,
-  LED_BLUE_S,
-  LED_GREEN_B,
-  LED_GREEN_S,
-  LED_YELLOW_B,
-  LED_YELLOW_S,
-  LED_RED_S,
-  LED_RED_B
-} colors_enum;
-
+/*
 // for last millis array
 typedef enum {
   LAST_F,
@@ -59,18 +61,13 @@ typedef enum {
   LAST_R,
   LAST_L
 } mili_enum;
+*/
 
-typedef enum {
-  VOLTAGE,
-  CURRENT,
-  PERCENTAGE,
-  TEMPERATURE
-} command_enum;
-
+/*
 typedef enum {
   YEL_TOP,
   YEL_BOT,
   RED_TOP,
   RED_BOT
 } battery_leds_enum;
-
+*/

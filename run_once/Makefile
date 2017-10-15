@@ -3,7 +3,7 @@ PROGNAME = run_once
 all: clean $(PROGNAME)
 
 $(PROGNAME):$(PROGNAME).o
-	gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) -lwiringPi
+	gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a libardNS.a -lwiringPi
 
 clean:
 	rm -f *.o $(PROGNAME)

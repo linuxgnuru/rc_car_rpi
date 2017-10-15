@@ -47,11 +47,13 @@ int main(int argc, char **argv)
     (void)signal(SIGHUP, die);
     (void)signal(SIGTERM, die);
     (void)signal(SIGABRT, die);
+    /*
     if (checkRoot())
     {
         printf("this must be run as root\ni.e.: \nsudo %s\n", argv[0]);
         return EXIT_FAILURE;
     }
+    */
     if (argc > 1)
     {
         cmd_ = atoi(argv[1]);

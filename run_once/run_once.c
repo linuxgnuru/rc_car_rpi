@@ -47,8 +47,10 @@ int send_I2C_Command(int u_cmd);
 int turn(int d, int dur);
 int move(int d, int dur);
 
-float ESgetData(int my_cmd);
-_Bool checkBat();
+_Bool checkBat(_Bool prt);
+float ESgetData(int my_cmd, _Bool prt);
+
+void printEnum(int, _Bool); // from libmyenum.a
 
 //////////////////////
 
@@ -118,6 +120,8 @@ int main(int argc, char **argv)
         printf("valid dir:\n0 - forward\n1 - backward\n2 - right\n3 - left\n");
         return EXIT_FAILURE;
     }
+
+    dir += 29; // fix dir input into enum
     // For Arduino
     if ((i2c_file_ar = open(devName, O_RDWR)) < 0)
     {
@@ -173,12 +177,12 @@ int main(int argc, char **argv)
         pinMode(batLedPins[i], OUTPUT);
     }
     // very first thing we should do is check the battery of the arduino.
-    if (checkBat())
+    if (checkBat(FALSE))
     {
         //printf("Can not continue; Arduino battery is too low (%0.2f%%)\n", bat_per);
         printf("Can not continue; Arduino battery is below 20%%\n");
-        digitalWrite(batLedPins[RED_TOP], LOW);
-        digitalWrite(batLedPins[RED_BOT], LOW);
+        digitalWrite(batLedPins[2], LOW);
+        digitalWrite(batLedPins[3], LOW);
         return EXIT_FAILURE;
     }
     // Test leds
@@ -221,7 +225,7 @@ int main(int argc, char **argv)
     // Center the front wheels
     while (send_I2C_Command(GO_CENTER) != CENTER_)
         ;
-    checkBat();
+    checkBat(TRUE);
     // turn on remote control
     digitalWrite(remotePowPin, HIGH);
     switch (dir)
@@ -229,8 +233,10 @@ int main(int argc, char **argv)
         case MOVE_F: case MOVE_B:
             if (printF)
             {
-                if (dir == MOVE_F) printf("%d: forward\n", dir);
-                else printf("%d: backward\n", dir);
+                printf("for/rev: ");
+                printEnum(dir, TRUE);
+                //if (dir == MOVE_F) printf("%d: forward\n", dir);
+                //else printf("%d: backward\n", dir);
             }
             result_from_running = move((dir == MOVE_F ? REMOTE_FORWARD : REMOTE_BACKWARD), dur);
 #ifdef USE_CAMERA
@@ -240,8 +246,10 @@ int main(int argc, char **argv)
         case MOVE_L: case MOVE_R:
             if (printF)
             {
-                if (dir == MOVE_R) printf("%d: right\n", dir);
-                else printf("%d: left\n", dir);
+                printf("left/right: ");
+                printEnum(dir, TRUE);
+                //if (dir == MOVE_R) printf("%d: right\n", dir);
+                //else printf("%d: left\n", dir);
             }
             result_from_running = turn((dir == MOVE_R ? GO_RIGHT : GO_LEFT), dur);
 #ifdef USE_CAMERA
@@ -257,9 +265,14 @@ int main(int argc, char **argv)
     digitalWrite(remotePowPin, LOW);
     if (result_from_running != OK_)
     {
-        digitalWrite(PCF_8574 + LED_RED_B, LOW);
+        digitalWrite(PCF_8574 + (LED_RED_B - 33), LOW);
         if (printF)
-            printf("error: %d\n", result_from_running);
+        {
+            //printf("[%d]\n", result_from_running);
+            printf("result (not OK_): ");
+            printEnum(result_from_running, TRUE);
+            //printf("error: %d\n", result_from_running);
+        }
     }
     close(i2c_file_ar);
     close(i2c_file_es);
@@ -327,24 +340,28 @@ int move(int d, int dur)
         return -1;
     if (d == REMOTE_FORWARD)
     {
-        f_or_b = LAST_F;
+        //f_or_b = LAST_F;
+        f_or_b = 0;
         fbPin = remoteForPin;
         sonarCmd = CHECK_SONAR_CENTER;
-        ledColor = LED_GREEN_B;
+        ledColor = LED_GREEN_B - 33;
     }
     else
     {
-        f_or_b = LAST_B;
+        //f_or_b = LAST_B;
+        f_or_b = 1;
         fbPin = remoteRevPin;
         sonarCmd = CHECK_SONAR_REAR;
-        ledColor = LED_RED_B;
+        ledColor = LED_RED_B - 33;
     }
     if (printF)
     {
-        printf("  f_or_b: %d\n", f_or_b);
-        printf("   fbPin: %d\n", fbPin);
-        printf("sonarCmd: %d\n", sonarCmd);
-        printf("ledColor: %d\n", ledColor);
+        printf("f_or_b: %d\n", f_or_b);
+        printf("fbPin: %d\n", fbPin);
+        printf("sonarCmd: ");
+        printEnum(sonarCmd, TRUE);
+        printf("ledColor: ");
+        printEnum(ledColor + 33, TRUE);
     }
     // test if something is in the way before we even try to move
     if (send_I2C_Command(sonarCmd) == OK_)
@@ -396,24 +413,29 @@ int turn(int d, int dur)
         return -1;
     if (d == GO_RIGHT)
     {
-        l_or_r = LAST_R;
+        //l_or_r = LAST_R;
+        l_or_r = 2;
         sonarCmd = CHECK_SONAR_RIGHT;
         thresh = FAR_RIGHT_;
-        ledColor = LED_BLUE_B;
+        ledColor = LED_BLUE_B - 33;
     }
     else
     {
-        l_or_r = LAST_L;
+        //l_or_r = LAST_L;
+        l_or_r = 3;
         sonarCmd = CHECK_SONAR_LEFT;
         thresh = FAR_LEFT_;
-        ledColor = LED_YELLOW_B;
+        ledColor = LED_YELLOW_B - 33;
     }
     if (printF)
     {
-        printf("  l_or_r: %d\n", l_or_r);
-        printf("  thresh: %d\n", thresh);
-        printf("sonarCmd: %d\n", sonarCmd);
-        printf("ledColor: %d\n", ledColor);
+        printf("l_or_r: %d\n", l_or_r);
+        printf("thresh: ");
+        printEnum(thresh, TRUE);
+        printf("sonarCmd: ");
+        printEnum(sonarCmd, TRUE);
+        printf("ledColor: ");
+        printEnum(ledColor + 33, TRUE);
     }
     // test if something is in the way before we even try to turn
     if (send_I2C_Command(sonarCmd) == OK_)
@@ -424,7 +446,7 @@ int turn(int d, int dur)
         digitalWrite(PCF_8574 + ledColor, LOW);
         while (send_I2C_Command(d) != thresh)
             ;
-        digitalWrite(PCF_8574 + LED_GREEN_B, LOW);
+        digitalWrite(PCF_8574 + (LED_GREEN_B - 33), LOW);
         // go forward
         digitalWrite(remoteForPin, LOW);
         while (1)
@@ -447,7 +469,7 @@ int turn(int d, int dur)
             } // end sonar millis
         } // end while 1
         digitalWrite(remoteForPin, HIGH);
-        digitalWrite(PCF_8574 + LED_GREEN_B, HIGH);
+        digitalWrite(PCF_8574 + (LED_GREEN_B - 33), HIGH);
         digitalWrite(PCF_8574 + ledColor, HIGH);
         // TODO might put move to center in forward or backward?
         // go back to center
@@ -459,21 +481,24 @@ int turn(int d, int dur)
     return Ret;
 } // end turn
 
-//////////////
-// battery
-//////////////
 /************
  * checkBat *
  ************/
-_Bool checkBat()
+_Bool checkBat(_Bool prt)
 {
     float bat_per = 0.0;
 
-    bat_per = ESgetData(PERCENTAGE);
+    bat_per = ESgetData(PERCENTAGE, prt);
+    /*
     if (bat_per <= 80.0) digitalWrite(batLedPins[YEL_TOP], LOW);
     if (bat_per <= 70.0) digitalWrite(batLedPins[YEL_BOT], LOW);
     if (bat_per <= 60.0) digitalWrite(batLedPins[RED_TOP], LOW);
     if (bat_per <= 50.0) digitalWrite(batLedPins[RED_BOT], LOW);
+    */
+    if (bat_per <= 80.0) digitalWrite(batLedPins[0], LOW);
+    if (bat_per <= 70.0) digitalWrite(batLedPins[1], LOW);
+    if (bat_per <= 60.0) digitalWrite(batLedPins[2], LOW);
+    if (bat_per <= 50.0) digitalWrite(batLedPins[3], LOW);
     return (bat_per < 20);
 } // end checkBat
 
@@ -481,7 +506,7 @@ _Bool checkBat()
  * ESgetData *
  *************/
 // for arduino battery
-float ESgetData(int my_cmd)
+float ESgetData(int my_cmd, _Bool prt)
 {
     unsigned char cmd[16];
     char buf[1];
@@ -504,7 +529,7 @@ float ESgetData(int my_cmd)
                 if (read(i2c_file_es, buf, 1) == 1) HB = buf[0];
                 if (read(i2c_file_es, buf, 1) == 1) LB = buf[0];
                 V = (unsigned long) ((HB << 5) + (LB >> 3)) * 122/100;
-                if (printF) printf("Voltage: %ld\n", V);
+                if (prt && printF) printf("Voltage: %ld\n", V);
                 ret = (float) V;
             }
             break;
@@ -516,7 +541,7 @@ float ESgetData(int my_cmd)
                 if (read(i2c_file_es, buf, 1) == 1) HB = buf[0];
                 if (read(i2c_file_es, buf, 1) == 1) LB = buf[0];
                 Iraw = (long) (((HB << 8) + LB) >> 4) * 5 / 4;
-                if (printF) printf("Current: %d mA\n", Iraw);
+                if (prt && printF) printf("Current: %d mA\n", Iraw);
                 ret = (float) Iraw;
             }
             break;
@@ -527,7 +552,7 @@ float ESgetData(int my_cmd)
                 usleep(10000); // wait for messages to be sent
                 if (read(i2c_file_es, buf, 1) == 1) p = buf[0];
                 perc = (float)p / 2;
-                if (printF) printf("Percentage: %0.2f%%\n", perc);
+                if (prt && printF) printf("Percentage: %0.2f%%\n", perc);
                 ret = perc;
             }
             break;
@@ -540,7 +565,7 @@ float ESgetData(int my_cmd)
                 if (read(i2c_file_es, buf, 1) == 1) LB = buf[0];
                 t = HB * 8 + LB / 32;
                 Temp = (float) t / 8;
-                if (printF) printf("Temperature: %0.2f C\n", Temp);
+                if (prt && printF) printf("Temperature: %0.2f C\n", Temp);
                 ret = Temp;
             }
             break;
@@ -548,9 +573,6 @@ float ESgetData(int my_cmd)
     }
     return ret;
 } // end ESgetData
-//////////////////
-// end battery
-//////////////////
 
 /*************
  * checkRoot *
