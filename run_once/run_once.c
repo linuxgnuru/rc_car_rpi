@@ -28,14 +28,14 @@
 
 #define MAX_MILLI 500
 
+#define SONAR_M 20
+
 const int remotePowPin = 25;
 const int remoteForPin = 24;
 const int remoteRevPin = 23;
 
 // XXX the following pins are "reversed" i.e. to turn on you put pin LOW
 const int batLedPins[4] = { 3, 2, 0, 7 };
-
-//#define USE_CAMERA
 
 //////////////////////
 _Bool checkRoot();
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    dir += 29; // fix dir input into enum
+    dir += 29; // fix dir input into enum; change 0-4 to the correct enum value
     // For Arduino
     if ((i2c_file_ar = open(devName, O_RDWR)) < 0)
     {
@@ -157,9 +157,12 @@ int main(int argc, char **argv)
     // Setup our priority
     piHiPri(99);
 
-    // setup remote control pins
-    pinMode(remotePowPin, OUTPUT);
-
+    // only continue if the remote control has been powered on
+    if (digitalRead(remotePowPin) == LOW)
+    {
+        printf("Remote on pin (%d) is not powered on.  Quiting.\n", remotePowPin);
+        return EXIT_FAILURE;
+    }
     // make sure the remote isn't sending any command to the car just yet
     pinMode(remoteForPin, PUD_UP);
     digitalWrite(remoteForPin, HIGH);
@@ -226,8 +229,6 @@ int main(int argc, char **argv)
     while (send_I2C_Command(GO_CENTER) != CENTER_)
         ;
     checkBat(TRUE);
-    // turn on remote control
-    digitalWrite(remotePowPin, HIGH);
     switch (dir)
     {
         case MOVE_F: case MOVE_B:
@@ -239,9 +240,6 @@ int main(int argc, char **argv)
                 //else printf("%d: backward\n", dir);
             }
             result_from_running = move((dir == MOVE_F ? REMOTE_FORWARD : REMOTE_BACKWARD), dur);
-#ifdef USE_CAMERA
-            //system("/usr/bin/raspistill -o /mnt/USB/pics/pic.jpg -w 640 -h 320 -n");
-#endif
             break;
         case MOVE_L: case MOVE_R:
             if (printF)
@@ -252,17 +250,12 @@ int main(int argc, char **argv)
                 //else printf("%d: left\n", dir);
             }
             result_from_running = turn((dir == MOVE_R ? GO_RIGHT : GO_LEFT), dur);
-#ifdef USE_CAMERA
-            //system("/usr/bin/raspistill -o /mnt/USB/pics/pic.jpg -w 640 -h 320 -n");
-#endif
             break;
         default:
             // should never get here
             if (printF) printf("default: [%d]\n", dir);
             break;
     }
-    // turn off remote control
-    digitalWrite(remotePowPin, LOW);
     if (result_from_running != OK_)
     {
         digitalWrite(PCF_8574 + (LED_RED_B - 33), LOW);
@@ -274,11 +267,11 @@ int main(int argc, char **argv)
             //printf("error: %d\n", result_from_running);
         }
     }
+    // close things up
     close(i2c_file_ar);
     close(i2c_file_es);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
-    digitalWrite(remotePowPin, LOW);
     for (i = 0; i < 9; i++)
         digitalWrite(PCF_8574 + i, HIGH);
     for (i = 0; i < 4; i++)
@@ -304,8 +297,9 @@ int send_I2C_Command(int u_cmd)
             break;
     }
     // wait for message to be sent and data gathered
-    // originally usleep(1000);
-    delay(1);
+    // originally usleep(1000); (same as delay(1) but might be more accurate)
+    //delay(1);
+    usleep(1000);
     if (result_write == 1)
     {
         char buf[1];
@@ -363,6 +357,7 @@ int move(int d, int dur)
         printf("ledColor: ");
         printEnum(ledColor + 33, TRUE);
     }
+
     // test if something is in the way before we even try to move
     if (send_I2C_Command(sonarCmd) == OK_)
     {
@@ -376,10 +371,11 @@ int move(int d, int dur)
             if (currentMillis - lastMillisMovement[f_or_b] >= dur)
             {
                 lastMillisMovement[f_or_b] = currentMillis;
+                Ret = d;
                 break;
             }
-            // only check sonar every 5 milliseconds
-            if (currentMillis - lastMillisSonar >= 5)
+            // only check sonar every SONAR_M milliseconds
+            if (currentMillis - lastMillisSonar >= SONAR_M)
             {
                 lastMillisSonar = currentMillis;
                 // something is in the way and can't go XXXward
@@ -389,10 +385,10 @@ int move(int d, int dur)
                     break;
                 } // end sonar test
             } // end sonar millis
-        } // end while
-        digitalWrite(fbPin, HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
-    }
+        }
+    } // end while
+    digitalWrite(fbPin, HIGH);
+    digitalWrite(PCF_8574 + ledColor, HIGH);
     return Ret;
 } // end move
 
@@ -417,7 +413,7 @@ int turn(int d, int dur)
         l_or_r = 2;
         sonarCmd = CHECK_SONAR_RIGHT;
         thresh = FAR_RIGHT_;
-        ledColor = LED_BLUE_B - 33;
+        ledColor = LED_BLUE_B - LED_BLUE_B; // 33 = BLUE_B so we have to reset the color
     }
     else
     {
@@ -425,7 +421,7 @@ int turn(int d, int dur)
         l_or_r = 3;
         sonarCmd = CHECK_SONAR_LEFT;
         thresh = FAR_LEFT_;
-        ledColor = LED_YELLOW_B - 33;
+        ledColor = LED_YELLOW_B - LED_BLUE_B;
     }
     if (printF)
     {
@@ -435,49 +431,44 @@ int turn(int d, int dur)
         printf("sonarCmd: ");
         printEnum(sonarCmd, TRUE);
         printf("ledColor: ");
-        printEnum(ledColor + 33, TRUE);
+        printEnum(ledColor + LED_BLUE_B, TRUE);
     }
-    // test if something is in the way before we even try to turn
-    if (send_I2C_Command(sonarCmd) == OK_)
+    // test if something is in the way before we even try to turn //if (send_I2C_Command(sonarCmd) == OK_)
+
+    // try to turn wheel turn right for dur seconds
+    digitalWrite(PCF_8574 + ledColor, LOW);
+    while (send_I2C_Command(d) != thresh)
+        ;
+    digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), LOW);
+    // go forward
+    digitalWrite(remoteForPin, LOW);
+    while (1)
     {
-        lastMillisSonar = 0;
-        // maybe easy way
-        // try to turn wheel turn right for dur seconds
-        digitalWrite(PCF_8574 + ledColor, LOW);
-        while (send_I2C_Command(d) != thresh)
-            ;
-        digitalWrite(PCF_8574 + (LED_GREEN_B - 33), LOW);
-        // go forward
-        digitalWrite(remoteForPin, LOW);
-        while (1)
+        currentMillis = millis();
+        if (currentMillis - lastMillisMovement[l_or_r] >= dur)
         {
-            currentMillis = millis();
-            if (currentMillis - lastMillisMovement[l_or_r] >= dur)
+            lastMillisMovement[l_or_r] = currentMillis;
+            Ret = OK_;
+            break;
+        }
+        // only check sonar every SONAR_M milliseconds
+        if (currentMillis - lastMillisSonar >= SONAR_M)
+        {
+            lastMillisSonar = currentMillis;
+            if (send_I2C_Command(sonarCmd) != OK_)
             {
-                lastMillisMovement[l_or_r] = currentMillis;
+                Ret = d;
                 break;
-            }
-            // only check sonar every 5 milliseconds
-            if (currentMillis - lastMillisSonar >= 5)
-            {
-                lastMillisSonar = currentMillis;
-                if (send_I2C_Command(sonarCmd) != OK_)
-                {
-                    Ret = d;
-                    break;
-                } // end sonar test
-            } // end sonar millis
-        } // end while 1
-        digitalWrite(remoteForPin, HIGH);
-        digitalWrite(PCF_8574 + (LED_GREEN_B - 33), HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
-        // TODO might put move to center in forward or backward?
-        // go back to center
-        while (send_I2C_Command(GO_CENTER) != CENTER_)
-            ;
-    } // end sonar check
-    else // can't go right / left
-        Ret = (d == GO_RIGHT ? RIGHT_ : LEFT_);
+            } // end sonar test
+        } // end sonar millis
+    } // end while 1
+    digitalWrite(remoteForPin, HIGH);
+    digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), HIGH);
+    digitalWrite(PCF_8574 + ledColor, HIGH);
+    // TODO might put move to center in forward or backward?
+    // go back to center
+    while (send_I2C_Command(GO_CENTER) != CENTER_)
+        ;
     return Ret;
 } // end turn
 
@@ -490,11 +481,11 @@ _Bool checkBat(_Bool prt)
 
     bat_per = ESgetData(PERCENTAGE, prt);
     /*
-    if (bat_per <= 80.0) digitalWrite(batLedPins[YEL_TOP], LOW);
-    if (bat_per <= 70.0) digitalWrite(batLedPins[YEL_BOT], LOW);
-    if (bat_per <= 60.0) digitalWrite(batLedPins[RED_TOP], LOW);
-    if (bat_per <= 50.0) digitalWrite(batLedPins[RED_BOT], LOW);
-    */
+       if (bat_per <= 80.0) digitalWrite(batLedPins[YEL_TOP], LOW);
+       if (bat_per <= 70.0) digitalWrite(batLedPins[YEL_BOT], LOW);
+       if (bat_per <= 60.0) digitalWrite(batLedPins[RED_TOP], LOW);
+       if (bat_per <= 50.0) digitalWrite(batLedPins[RED_BOT], LOW);
+     */
     if (bat_per <= 80.0) digitalWrite(batLedPins[0], LOW);
     if (bat_per <= 70.0) digitalWrite(batLedPins[1], LOW);
     if (bat_per <= 60.0) digitalWrite(batLedPins[2], LOW);
@@ -598,7 +589,9 @@ static void die(int sig)
         digitalWrite(batLedPins[i], HIGH);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
+#ifdef USE_REMOTE_POWER
     digitalWrite(remotePowPin, LOW);
+#endif
     close(i2c_file_ar);
     close(i2c_file_es);
     if (sig != 0 && sig != 2) (void)fprintf(stderr, "caught signal %s\n", strsignal(sig));
