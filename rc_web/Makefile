@@ -1,4 +1,4 @@
-PROGNAME = NO_sonar_run_once
+PROGNAME = rc_web
 ifeq ($(PREFIX),)
 	PREFIX := /usr/local
 endif

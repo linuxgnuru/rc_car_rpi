@@ -15,14 +15,9 @@
 
 #include <wiringPi.h>
 
-#ifndef	TRUE
-#  define	TRUE	(1==1)
-#  define	FALSE	(1==2)
-#endif
+#include "rc_header.h"
 
 #define BATTERY_CAPACITY 1200 // mAh
-
-#define NSE_ADDRESS 0x36
 
 unsigned long lastM = 0;
 long lastTime;
@@ -30,7 +25,6 @@ unsigned long TimeToEmpty;
 int Current[10], AvgCurrent;
 _Bool charging;
 
-static const char *devName = "/dev/i2c-1";
 int i2c_file;
 
 void TTE();
@@ -45,10 +39,8 @@ static void die(int sig)
 {
     close(i2c_file);
     endwin();
-    if (sig != 0 && sig != 2)
-        (void)fprintf(stderr, "caught signal %s\n", strsignal(sig));
-    if (sig == 2)
-        (void)fprintf(stderr, "Exiting due to Ctrl + C (%s)\n", strsignal(sig));
+    if (sig != 0 && sig != 2) (void)fprintf(stderr, "caught signal %s\n", strsignal(sig));
+    if (sig == 2) (void)fprintf(stderr, "Exiting due to Ctrl + C (%s)\n", strsignal(sig));
     exit(0);
 }
 
@@ -78,9 +70,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to access %s\n", __LINE__, __FILE__, __func__, devName);
         exit(1);
     }
-    if (ioctl(i2c_file, I2C_SLAVE, NSE_ADDRESS) < 0)
+    if (ioctl(i2c_file, I2C_SLAVE, ADDRESS_ES) < 0)
     {
-        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, NSE_ADDRESS);
+        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, ADDRESS_ES);
         exit(1);
     }
     initscr();
@@ -89,7 +81,7 @@ int main(int argc, char **argv)
     nodelay(stdscr, true);
     curs_set(0);
     move(0, 1);
-    printw("I2C: Acquiring bus to 0x%x", NSE_ADDRESS);
+    printw("I2C: Acquiring bus to 0x%x", ADDRESS_ES);
     TTE();
     while (stopMe == FALSE)
     {

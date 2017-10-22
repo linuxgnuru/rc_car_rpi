@@ -8,9 +8,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#include "ard_ns.h"
-
-#define ADDRESS_ES 0X36
+#include "rc_header.h"
 
 #define BATTERY_CAPACITY 1200 // mAh
 
@@ -22,7 +20,6 @@ _Bool TTE();
 
 //void printEnum(int, _Bool); // from libmyenum.a
 
-static const char *devName = "/dev/i2c-1";
 int i2c_file_es;
 int Current[10];
 static _Bool isOpen = FALSE;

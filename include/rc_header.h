@@ -3,6 +3,10 @@
 #  define	FALSE	(1==2)
 #endif
 
+#define ADDRESS_AR 0x04
+#define ADDRESS_ES 0X36
+#define ADDRESS_8574 0x20
+
 typedef enum {
   BAD_,               //  0
   OK_,                //  1
@@ -28,9 +32,39 @@ typedef enum {
   FAR_RIGHT_,         // 19
   FAR_LEFT_,          // 20
 
-  REMOTE_FORWARD,        // 21
-  REMOTE_BACKWARD,       // 22
-  REMOTE_STOP,           // 23
-  REMOTE_POWER           // 24
+  REMOTE_FORWARD,     // 21
+  REMOTE_BACKWARD,    // 22
+  REMOTE_STOP,        // 23
+  REMOTE_POWER,       // 24
+
+  VOLTAGE,            // 25
+  CURRENT,            // 26
+  PERCENTAGE,         // 27
+  TEMPERATURE,        // 28
+
+  MOVE_F,             // 29
+  MOVE_B,             // 30
+  MOVE_R,             // 31
+  MOVE_L,             // 32
+
+  LED_BLUE_B,         // 33
+  LED_BLUE_S,         // 34
+  LED_GREEN_B,        // 35
+  LED_GREEN_S,        // 36
+  LED_YELLOW_B,       // 37
+  LED_YELLOW_S,       // 38
+  LED_RED_S,          // 39
+  LED_RED_B           // 40
 } my_enum;
 
+const int remotePowPin = 1;
+const int remoteForPin = 4;
+const int remoteRevPin = 5;
+
+// XXX the following pins are "reversed" i.e. to turn on you put pin LOW
+const int batLedPins[4] = { 3, 2, 0, 7 };
+
+#define MX_ 6
+const int GPIOpins[MX_] = { 3, 2, 0, 7, 4, 5 };
+
+static const char *devName = "/dev/i2c-1";

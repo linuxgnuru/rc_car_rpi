@@ -18,11 +18,7 @@
 #include <wiringPi.h>
 #include <pcf8574.h>
 
-#include "file_run_once.h"
-
-#define ADDRESS_AR 0x04
-#define ADDRESS_ES 0X36
-#define ADDRESS_8574 0x20
+#include "rc_header.h"
 
 #define PCF_8574 100
 
@@ -30,13 +26,6 @@
 
 const char defaultFilename[19] = "/mnt/USB/robot.txt";
 FILE *fp;
-
-const int remotePowPin = 25;
-const int remoteForPin = 24;
-const int remoteRevPin = 23;
-
-// XXX the following pins are "reversed" i.e. to turn on you put pin LOW
-const int batLedPins[4] = { 3, 2, 0, 7 };
 
 //#define USE_CAMERA
 
@@ -56,7 +45,6 @@ float ESgetData(int my_cmd);
 _Bool checkBat();
 //////////////////////
 
-static const char *devName = "/dev/i2c-1";
 // had to make i2c_file_* global so die could close it
 int i2c_file_ar;
 int i2c_file_es;
@@ -76,10 +64,9 @@ int main(int argc, char **argv)
     int ti;
     int m_cnt = 0;
     int result_from_running = -1;
-    int dir, dur;
+    int dir = -1, dur = -1;
     _Bool testLed = FALSE;
 
-    dir = dur = -1;
     // note: we're assuming BSD-style reliable signals here
     (void)signal(SIGINT, die);
     (void)signal(SIGHUP, die);
@@ -91,37 +78,13 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     // For Arduino
-    if ((i2c_file_ar = open(devName, O_RDWR)) < 0)
-    {
-        fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName);
-        exit(1);
-    }
-    if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0)
-    {
-        fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR);
-        exit(1);
-    }
+    if ((i2c_file_ar = open(devName, O_RDWR)) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName); exit(1); }
+    if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR); exit(1); }
     // for energy shield module
-    if ((i2c_file_es = open(devName, O_RDWR)) < 0)
-    {
-        fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName);
-        exit(1);
-    }
-    if (ioctl(i2c_file_es, I2C_SLAVE, ADDRESS_ES) < 0)
-    {
-        fprintf(stderr, " [EnergyShield] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_ES);
-        exit(1);
-    }
-    if (wiringPiSetup() == -1)
-    {
-        fprintf(stdout, " Error trying to setup wiringPi - oops: %s\n", strerror(errno));
-        exit(1);
-    }
-    if (pcf8574Setup(PCF_8574, ADDRESS_8574) != 1)
-    {
-        fprintf(stdout, " Error trying to setup pcf8574 - oops: %s\n", strerror(errno));
-        exit(1);
-    }
+    if ((i2c_file_es = open(devName, O_RDWR)) < 0) { fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName); exit(1); }
+    if (ioctl(i2c_file_es, I2C_SLAVE, ADDRESS_ES) < 0) { fprintf(stderr, " [EnergyShield] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_ES); exit(1); }
+    if (wiringPiSetup() == -1) { fprintf(stdout, " Error trying to setup wiringPi - oops: %s\n", strerror(errno)); exit(1); }
+    if (pcf8574Setup(PCF_8574, ADDRESS_8574) != 1) { fprintf(stdout, " Error trying to setup pcf8574 - oops: %s\n", strerror(errno)); exit(1); }
     // Setup our priority
     piHiPri(99);
 
@@ -271,7 +234,7 @@ int send_I2C_Command(int u_cmd)
     }
     // wait for message to be sent and data gathered
     // originally usleep(1000);
-    delay(1);
+    usleep(1000);
     if (result_write == 1)
     {
         char buf[1];

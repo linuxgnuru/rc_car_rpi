@@ -1,4 +1,4 @@
-PROGNAME = force_center
+PROGNAME = enum_2_char
 
 all: clean $(PROGNAME)
 

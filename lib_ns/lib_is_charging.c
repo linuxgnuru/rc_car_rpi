@@ -6,16 +6,10 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
-#ifndef	TRUE
-#  define	TRUE	(1==1)
-#  define	FALSE	(1==2)
-#endif
+#include "rc_header.h"
 
 #define BATTERY_CAPACITY 1200 // mAh
 
-#define NSE_ADDRESS 0x36
-
-static const char *devName = "/dev/i2c-1";
 int i2c_file;
 int Current[10];
 
@@ -29,9 +23,9 @@ _Bool isCharging()
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to access %s\n", __LINE__, __FILE__, __func__, devName);
         exit(1);
     }
-    if (ioctl(i2c_file, I2C_SLAVE, NSE_ADDRESS) < 0)
+    if (ioctl(i2c_file, I2C_SLAVE, ADDRESS_ES) < 0)
     {
-        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, NSE_ADDRESS);
+        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, ADDRESS_ES);
         exit(1);
     }
     b = TTE();

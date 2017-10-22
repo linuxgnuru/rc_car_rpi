@@ -1,4 +1,4 @@
-PROGNAME = force_center
+PROGNAME = parse_file
 
 all: clean $(PROGNAME)
 

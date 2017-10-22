@@ -18,24 +18,13 @@
 #include <wiringPi.h>
 #include <pcf8574.h>
 
-#include "run_once.h"
-
-#define ADDRESS_AR 0x04
-#define ADDRESS_ES 0X36
-#define ADDRESS_8574 0x20
+#include "rc_header.h"
 
 #define PCF_8574 100
 
 #define MAX_MILLI 500
 
 #define SONAR_M 20
-
-const int remotePowPin = 25;
-const int remoteForPin = 24;
-const int remoteRevPin = 23;
-
-// XXX the following pins are "reversed" i.e. to turn on you put pin LOW
-const int batLedPins[4] = { 3, 2, 0, 7 };
 
 //////////////////////
 _Bool checkRoot();
@@ -54,7 +43,6 @@ void printEnum(int, _Bool); // from libmyenum.a
 
 //////////////////////
 
-static const char *devName = "/dev/i2c-1";
 // had to make i2c_file_* global so die could close it
 int i2c_file_ar;
 int i2c_file_es;
@@ -72,11 +60,10 @@ int main(int argc, char **argv)
     int i;
     int ti;
     int result_from_running = -1;
-    int dir, dur;
+    int dir = -1, dur = -1;
     _Bool errF = FALSE;
     _Bool testLed = FALSE;
 
-    dir = dur = -1;
     // note: we're assuming BSD-style reliable signals here
     (void)signal(SIGINT, die);
     (void)signal(SIGHUP, die);
@@ -123,46 +110,16 @@ int main(int argc, char **argv)
 
     dir += 29; // fix dir input into enum; change 0-4 to the correct enum value
     // For Arduino
-    if ((i2c_file_ar = open(devName, O_RDWR)) < 0)
-    {
-        fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName);
-        exit(1);
-    }
-    if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0)
-    {
-        fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR);
-        exit(1);
-    }
+    if ((i2c_file_ar = open(devName, O_RDWR)) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName); exit(1); }
+    if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR); exit(1); }
     // for energy shield module
-    if ((i2c_file_es = open(devName, O_RDWR)) < 0)
-    {
-        fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName);
-        exit(1);
-    }
-    if (ioctl(i2c_file_es, I2C_SLAVE, ADDRESS_ES) < 0)
-    {
-        fprintf(stderr, " [EnergyShield] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_ES);
-        exit(1);
-    }
-    if (wiringPiSetup() == -1)
-    {
-        fprintf(stdout, " Error trying to setup wiringPi - oops: %s\n", strerror(errno));
-        exit(1);
-    }
-    if (pcf8574Setup(PCF_8574, ADDRESS_8574) != 1)
-    {
-        fprintf(stdout, " Error trying to setup pcf8574 - oops: %s\n", strerror(errno));
-        exit(1);
-    }
+    if ((i2c_file_es = open(devName, O_RDWR)) < 0) { fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName); exit(1); }
+    if (ioctl(i2c_file_es, I2C_SLAVE, ADDRESS_ES) < 0) { fprintf(stderr, " [EnergyShield] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_ES); exit(1); }
+    if (wiringPiSetup() == -1) { fprintf(stdout, " Error trying to setup wiringPi - oops: %s\n", strerror(errno)); exit(1); }
+    if (pcf8574Setup(PCF_8574, ADDRESS_8574) != 1) { fprintf(stdout, " Error trying to setup pcf8574 - oops: %s\n", strerror(errno)); exit(1); }
     // Setup our priority
     piHiPri(99);
 
-    // only continue if the remote control has been powered on
-    if (digitalRead(remotePowPin) == LOW)
-    {
-        printf("Remote on pin (%d) is not powered on.  Quiting.\n", remotePowPin);
-        return EXIT_FAILURE;
-    }
     // make sure the remote isn't sending any command to the car just yet
     pinMode(remoteForPin, PUD_UP);
     digitalWrite(remoteForPin, HIGH);
@@ -172,6 +129,8 @@ int main(int argc, char **argv)
     digitalWrite(remoteRevPin, HIGH);
     pinMode(remoteRevPin, OUTPUT);
 
+    pinMode(remotePowPin, OUTPUT);
+    digitalWrite(remotePowPin, HIGH);
     // the following sets the pins for output but will start off all HIGH instead of all LOW
     for (i = 0; i < 4; i++)
     {
@@ -270,6 +229,7 @@ int main(int argc, char **argv)
     // close things up
     close(i2c_file_ar);
     close(i2c_file_es);
+    digitalWrite(remotePowPin, LOW);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
     for (i = 0; i < 9; i++)
@@ -589,9 +549,6 @@ static void die(int sig)
         digitalWrite(batLedPins[i], HIGH);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
-#ifdef USE_REMOTE_POWER
-    digitalWrite(remotePowPin, LOW);
-#endif
     close(i2c_file_ar);
     close(i2c_file_es);
     if (sig != 0 && sig != 2) (void)fprintf(stderr, "caught signal %s\n", strsignal(sig));

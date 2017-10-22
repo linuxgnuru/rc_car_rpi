@@ -14,11 +14,8 @@
 
 #include <wiringPi.h>
 
-#include "force_center.h"
+#include "rc_header.h"
 
-#define ADDRESS 0x04
-
-static const char *devName = "/dev/i2c-1";
 int i2c_file;
 //int length;
 //unsigned char buffer[60] = {0};
@@ -45,9 +42,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to access %s\n", __LINE__, __FILE__, __func__, devName);
         exit(1);
     }
-    if (ioctl(i2c_file, I2C_SLAVE, ADDRESS) < 0)
+    if (ioctl(i2c_file, I2C_SLAVE, ADDRESS_AR) < 0)
     {
-        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, ADDRESS);
+        fprintf(stderr, "[%d] [%s] [%s] I2C: Failed to acquire bus access/talk to slave 0x%x\n", __LINE__, __FILE__, __func__, ADDRESS_AR);
         exit(1);
     }
     while (sendCommand(GO_CENTER) != CENTER_)

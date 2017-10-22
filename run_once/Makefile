@@ -7,7 +7,7 @@ all: clean $(PROGNAME)
 
 $(PROGNAME):$(PROGNAME).o
 #gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a libardNS.a -lwiringPi
-	gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a -lwiringPi
+	gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a -lwiringPi -I../include
 
 clean:
 	rm -f *.o $(PROGNAME)

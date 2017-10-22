@@ -12,13 +12,9 @@
 
 #include <wiringPi.h>
 
-#include "man_rc.h"
+#include "rc_header.h"
 
 #define MAX_MILLI 500
-
-const int remotePowPin = 25;
-const int remoteForPin = 24;
-const int remoteRevPin = 23;
 
 //unsigned long lastMillisMovement[4] = { 0, 0, 0, 0 };
 unsigned long lmf = 0;

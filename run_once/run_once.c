@@ -18,22 +18,11 @@
 #include <wiringPi.h>
 #include <pcf8574.h>
 
-#include "run_once.h"
-
-#define ADDRESS_AR 0x04
-#define ADDRESS_ES 0X36
-#define ADDRESS_8574 0x20
+#include "rc_header.h"
 
 #define PCF_8574 100
 
 #define MAX_MILLI 500
-
-const int remotePowPin = 25;
-const int remoteForPin = 24;
-const int remoteRevPin = 23;
-
-// XXX the following pins are "reversed" i.e. to turn on you put pin LOW
-const int batLedPins[4] = { 3, 2, 0, 7 };
 
 //////////////////////
 _Bool checkRoot();
@@ -52,7 +41,6 @@ void printEnum(int, _Bool); // from libmyenum.a
 
 //////////////////////
 
-static const char *devName = "/dev/i2c-1";
 // had to make i2c_file_* global so die could close it
 int i2c_file_ar;
 int i2c_file_es;
@@ -422,8 +410,7 @@ int move(int d, int dur)
         digitalWrite(fbPin, HIGH);
         digitalWrite(PCF_8574 + ledColor, HIGH);
     }
-}
-return Ret;
+    return Ret;
 } // end move
 
 /********
