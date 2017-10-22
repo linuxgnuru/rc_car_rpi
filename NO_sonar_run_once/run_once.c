@@ -28,6 +28,8 @@
 
 #define MAX_MILLI 500
 
+#define SONAR_M 20
+
 const int remotePowPin = 25;
 const int remoteForPin = 24;
 const int remoteRevPin = 23;
@@ -58,7 +60,6 @@ int i2c_file_ar;
 int i2c_file_es;
 
 _Bool printF = TRUE;
-_Bool useSonar = FALSE;
 
 _Bool ledState[8] = { FALSE };
 
@@ -90,20 +91,8 @@ int main(int argc, char **argv)
     {
         if (argc > 3)
         {
-            if (argc > 4)
-            {
-                if (strcmp(argv[3], "noprint") == 0 || strcmp(argv[4], "noprint") == 0)
-                    printF = FALSE;
-                else if (strcmp(argv[3], "sonar") == 0 || strcmp(argv[4], "sonar") == 0)
-                    useSonar = TRUE;
-            }
-            else
-            {
-                if (strcmp(argv[3], "noprint") == 0)
-                    printF = FALSE;
-                else if (strcmp(argv[3], "sonar") == 0)
-                    useSonar = TRUE;
-            }
+            if (strcmp(argv[3], "noprint") == 0)
+                printF = FALSE;
         }
         dir = atoi(argv[1]);
         if (dir < 0 || dir > 3)
@@ -369,44 +358,10 @@ int move(int d, int dur)
         printEnum(ledColor + 33, TRUE);
     }
 
-    if (useSonar)
+    // test if something is in the way before we even try to move
+    if (send_I2C_Command(sonarCmd) == OK_)
     {
-        // test if something is in the way before we even try to move
-        if (send_I2C_Command(sonarCmd) == OK_)
-        {
-            lastMillisSonar = 0;
-            digitalWrite(PCF_8574 + ledColor, LOW);
-            digitalWrite(fbPin, LOW);
-            while (1)
-            {
-                currentMillis = millis();
-                // after dur seconds stop going XXXward
-                if (currentMillis - lastMillisMovement[f_or_b] >= dur)
-                {
-                    lastMillisMovement[f_or_b] = currentMillis;
-                    break;
-                }
-                if (useSonar)
-                {
-                    // only check sonar every 5 milliseconds
-                    if (currentMillis - lastMillisSonar >= 5)
-                    {
-                        lastMillisSonar = currentMillis;
-                        // something is in the way and can't go XXXward
-                        if (send_I2C_Command(sonarCmd) != OK_)
-                        {
-                            Ret = d;
-                            break;
-                        } // end sonar test
-                    } // end sonar millis
-                }
-            } // end while
-            digitalWrite(fbPin, HIGH);
-            digitalWrite(PCF_8574 + ledColor, HIGH);
-        }
-    }
-    else
-    {
+        lastMillisSonar = 0;
         digitalWrite(PCF_8574 + ledColor, LOW);
         digitalWrite(fbPin, LOW);
         while (1)
@@ -416,14 +371,25 @@ int move(int d, int dur)
             if (currentMillis - lastMillisMovement[f_or_b] >= dur)
             {
                 lastMillisMovement[f_or_b] = currentMillis;
+                Ret = d;
                 break;
             }
-        } // end while
-        digitalWrite(fbPin, HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
-    }
-}
-return Ret;
+            // only check sonar every SONAR_M milliseconds
+            if (currentMillis - lastMillisSonar >= SONAR_M)
+            {
+                lastMillisSonar = currentMillis;
+                // something is in the way and can't go XXXward
+                if (send_I2C_Command(sonarCmd) != OK_)
+                {
+                    Ret = d;
+                    break;
+                } // end sonar test
+            } // end sonar millis
+        }
+    } // end while
+    digitalWrite(fbPin, HIGH);
+    digitalWrite(PCF_8574 + ledColor, HIGH);
+    return Ret;
 } // end move
 
 /********
@@ -467,81 +433,42 @@ int turn(int d, int dur)
         printf("ledColor: ");
         printEnum(ledColor + LED_BLUE_B, TRUE);
     }
-    if (useSonar)
+    // test if something is in the way before we even try to turn //if (send_I2C_Command(sonarCmd) == OK_)
+
+    // try to turn wheel turn right for dur seconds
+    digitalWrite(PCF_8574 + ledColor, LOW);
+    while (send_I2C_Command(d) != thresh)
+        ;
+    digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), LOW);
+    // go forward
+    digitalWrite(remoteForPin, LOW);
+    while (1)
     {
-        // test if something is in the way before we even try to turn
-        //if (send_I2C_Command(sonarCmd) == OK_)
-        //{
-        lastMillisSonar = 0;
-        // maybe easy way
-        // try to turn wheel turn right for dur seconds
-        digitalWrite(PCF_8574 + ledColor, LOW);
-        while (send_I2C_Command(d) != thresh)
-            ;
-        digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), LOW);
-        // go forward
-        digitalWrite(remoteForPin, LOW);
-        while (1)
+        currentMillis = millis();
+        if (currentMillis - lastMillisMovement[l_or_r] >= dur)
         {
-            currentMillis = millis();
-            if (currentMillis - lastMillisMovement[l_or_r] >= dur)
-            {
-                lastMillisMovement[l_or_r] = currentMillis;
-                Ret = OK_;
-                break;
-            }
-            // only check sonar every 5 milliseconds
-            if (currentMillis - lastMillisSonar >= 5)
-            {
-                lastMillisSonar = currentMillis;
-                if (send_I2C_Command(sonarCmd) != OK_)
-                {
-                    Ret = d;
-                    break;
-                } // end sonar test
-            } // end sonar millis
-        } // end while 1
-        digitalWrite(remoteForPin, HIGH);
-        digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
-        // TODO might put move to center in forward or backward?
-        // go back to center
-        while (send_I2C_Command(GO_CENTER) != CENTER_)
-            ;
-        /*
-           } // end sonar check
-           else // can't go right / left
-           Ret = (d == GO_RIGHT ? RIGHT_ : LEFT_);
-         */
-    } // end if useSonar
-    else
-    {
-        // maybe easy way
-        // try to turn wheel turn right for dur seconds
-        digitalWrite(PCF_8574 + ledColor, LOW);
-        while (send_I2C_Command(d) != thresh)
-            ;
-        digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), LOW);
-        // go forward
-        digitalWrite(remoteForPin, LOW);
-        while (1)
+            lastMillisMovement[l_or_r] = currentMillis;
+            Ret = OK_;
+            break;
+        }
+        // only check sonar every SONAR_M milliseconds
+        if (currentMillis - lastMillisSonar >= SONAR_M)
         {
-            currentMillis = millis();
-            if (currentMillis - lastMillisMovement[l_or_r] >= dur)
+            lastMillisSonar = currentMillis;
+            if (send_I2C_Command(sonarCmd) != OK_)
             {
-                lastMillisMovement[l_or_r] = currentMillis;
-                Ret = OK_;
+                Ret = d;
                 break;
-            }
-        } // end while 1
-        digitalWrite(remoteForPin, HIGH);
-        digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
-        // TODO might put move to center in forward or backward?
-        // go back to center
-        while (send_I2C_Command(GO_CENTER) != CENTER_)
-            ;
-    }
+            } // end sonar test
+        } // end sonar millis
+    } // end while 1
+    digitalWrite(remoteForPin, HIGH);
+    digitalWrite(PCF_8574 + (LED_GREEN_B - LED_BLUE_B), HIGH);
+    digitalWrite(PCF_8574 + ledColor, HIGH);
+    // TODO might put move to center in forward or backward?
+    // go back to center
+    while (send_I2C_Command(GO_CENTER) != CENTER_)
+        ;
     return Ret;
 } // end turn
 
