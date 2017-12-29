@@ -43,12 +43,6 @@ void printTable();
 void clearLine(int col);
 void runAll();
 
-_Bool checkRoot()
-{
-  uid_t uid = getuid(), euid = geteuid();
-  return (uid != 0 || uid != euid);
-}
-
 static void die(int sig)
 {
   close(i2c_file);
@@ -68,11 +62,6 @@ int main(int argc, char **argv)
   (void)signal(SIGTERM, die);
   (void)signal(SIGABRT, die);
 
-  if (checkRoot())
-  {
-    printf("invalid credentials\nsudo %s\n", argv[0]);
-    return EXIT_FAILURE;
-  }
   if (argc > 1)
   {
     cmd_ = atoi(argv[1]);

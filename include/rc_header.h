@@ -42,19 +42,30 @@ typedef enum {
   PERCENTAGE,         // 27
   TEMPERATURE,        // 28
 
-  MOVE_F,             // 29
+  MOVE_F = 0,         // 29
   MOVE_B,             // 30
   MOVE_R,             // 31
   MOVE_L,             // 32
 
-  LED_BLUE_B,         // 33
+  LED_BLUE_B = 0,     // 0
   LED_BLUE_S,         // 34
   LED_GREEN_B,        // 35
   LED_GREEN_S,        // 36
   LED_YELLOW_B,       // 37
   LED_YELLOW_S,       // 38
   LED_RED_S,          // 39
-  LED_RED_B           // 40
+  LED_RED_B,           // 40
+
+  LED_BAT_RT = 0,
+  LED_BAT_RB,
+  LED_BAT_YT,
+  LED_BAT_YB,
+
+  TIMMER_F = 0,
+  TIMMER_B,
+  TIMMER_R,
+  TIMMER_L
+
 } my_enum;
 
 const int remotePowPin = 1;

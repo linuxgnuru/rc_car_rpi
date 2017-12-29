@@ -1,13 +1,26 @@
 PROGNAME = run_once
+INCLUDE = -I../include
+DEBUG = -O2
+CFLAGS = $(DEBUG) -Wall $(INCLUDE)
+LIBS = -lwiringPi libmyenum.a
+CC = gcc
+SRC = $(PROGNAME).c
+OBJ =   $(SRC:.c=.o)
+
 ifeq ($(PREFIX),)
 	PREFIX := /usr/local
 endif
 
 all: clean $(PROGNAME)
 
-$(PROGNAME):$(PROGNAME).o
-#gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a libardNS.a -lwiringPi
-	gcc -O2 -Wall $(PROGNAME).c -o $(PROGNAME) libmyenum.a -lwiringPi -I../include
+$(PROGNAME): $(OBJ)
+	@$(CC) -o $@ $(OBJ) $(LIBS)
+
+.c.o:
+	@$(CC) -c $(CFLAGS) $< -o $@
+
+#$(PROGNAME):$(PROGNAME).o
+#	gcc -O2 -Wall -Winline -I$(INCLUDE) $(PROGNAME).c -o $(PROGNAME) -lwiringPi libmyenum.a
 
 clean:
 	rm -f *.o $(PROGNAME)
