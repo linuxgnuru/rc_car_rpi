@@ -52,9 +52,13 @@ int main(int argc, char **argv)
     {
         dir = atoi(argv[1]);
         if (dir < 0 || dir > 4)
+<<<<<<< HEAD
         {
             errF = ERR_ARG_DIR;
         }
+=======
+            errF = TRUE;
+>>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     }
     else
     {
@@ -64,11 +68,18 @@ int main(int argc, char **argv)
     {
         printf("usage %s [dir]\n", argv[0]);
         printf("valid dir:\n0 - forward\n1 - backward\n2 - right\n3 - left\n4 - stop\n");
+<<<<<<< HEAD
         printf("ERROR: ");
         if (errF == ERR_ARG_DIR) printf("Direction must be 0 through 4\n");
         else printf("Nothing entered\n");
         return EXIT_FAILURE;
     }
+=======
+        return EXIT_FAILURE;
+    }
+    if (dir != 4)
+        dir += 29;
+>>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     if ((i2c_file_ar = open(devName, O_RDWR)) < 0)     { fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName); exit(1); }
     if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR); exit(1); }
     if ((i2c_file_es = open(devName, O_RDWR)) < 0)     { fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName); exit(1); }
@@ -95,8 +106,11 @@ int main(int argc, char **argv)
         digitalWrite(batLedPins[LED_BAT_RB], LOW);
         return EXIT_FAILURE;
     }
+<<<<<<< HEAD
     digitalWrite(remotePowPin, HIGH);
     delay(2000);
+=======
+>>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     if (dir != 4)
     {
         while (send_I2C_Command(GO_CENTER) != CENTER_)
@@ -105,8 +119,12 @@ int main(int argc, char **argv)
         switch (dir)
         {
             case MOVE_F: case MOVE_B: result_run = move(dir); break;
+<<<<<<< HEAD
             case MOVE_L: result_run = turn(GO_LEFT); break;
             case MOVE_R: result_run = turn(GO_RIGHT); break;
+=======
+            case MOVE_L: case MOVE_R: result_run = turn(dir); break;
+>>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
             default: break;
         }
         if (result_run != OK_)

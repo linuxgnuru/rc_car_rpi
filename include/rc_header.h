@@ -42,6 +42,7 @@ typedef enum {
   PERCENTAGE,         // 27
   TEMPERATURE,        // 28
 
+<<<<<<< HEAD
   MOVE_F = 0,         // 29
   MOVE_B,             // 30
   MOVE_R,             // 31
@@ -66,6 +67,32 @@ typedef enum {
   TIMMER_R,
   TIMMER_L
 
+=======
+  MOVE_F = 21,        // 21
+  MOVE_B,             // 22
+  MOVE_R = 7,         //  7
+  MOVE_L = 9,         //  9
+
+  LED_BLUE_B = 0,     //  0
+  LED_BLUE_S,         //  1
+  LED_GREEN_B,        //  2
+  LED_GREEN_S,        //  3
+  LED_YELLOW_B,       //  4
+  LED_YELLOW_S,       //  5
+  LED_RED_S,          //  6
+  LED_RED_B,          //  7
+
+  LED_BAT_YT = 0,     //  0
+  LED_BAT_YB,         //  1
+  LED_BAT_RT,         //  2
+  LED_BAT_RB,         //  3
+
+  TIMMER_F = 0,       //  0
+  TIMMER_B,           //  1
+  TIMMER_R,           //  2
+  TIMMER_L            //  3
+
+>>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
 } my_enum;
 
 const int remotePowPin = 1;
@@ -73,6 +100,10 @@ const int remoteForPin = 4;
 const int remoteRevPin = 5;
 
 // XXX the following pins are "reversed" i.e. to turn on you put pin LOW
+// 0 = 3 = yellow top
+// 1 = 2 = yellow bottom
+// 2 = 0 = red top
+// 3 = 7 = red bottom
 const int batLedPins[4] = { 3, 2, 0, 7 };
 
 #define MX_ 6
