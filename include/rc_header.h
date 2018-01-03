@@ -1,3 +1,8 @@
+#pragma once
+
+//#ifndef RC_HEADER_H
+//#define RC_HEADER_H
+
 #ifndef	TRUE
 #  define	TRUE	(1==1)
 #  define	FALSE	(1==2)
@@ -5,6 +10,7 @@
 
 #define ADDRESS_AR 0x04
 #define ADDRESS_ES 0X36
+// the following is no longer used
 #define ADDRESS_8574 0x20
 
 typedef enum {
@@ -42,58 +48,30 @@ typedef enum {
   PERCENTAGE,         // 27
   TEMPERATURE,        // 28
 
-<<<<<<< HEAD
-  MOVE_F = 0,         // 29
-  MOVE_B,             // 30
-  MOVE_R,             // 31
-  MOVE_L,             // 32
+  MOVE_F = 30,        // 30
+  MOVE_B,             // 31
+  MOVE_R,             // 32
+  MOVE_L,             // 33
 
-  LED_BLUE_B = 0,     // 0
-  LED_BLUE_S,         // 34
-  LED_GREEN_B,        // 35
-  LED_GREEN_S,        // 36
-  LED_YELLOW_B,       // 37
-  LED_YELLOW_S,       // 38
-  LED_RED_S,          // 39
-  LED_RED_B,           // 40
-
-  LED_BAT_RT = 0,
-  LED_BAT_RB,
-  LED_BAT_YT,
-  LED_BAT_YB,
-
-  TIMMER_F = 0,
-  TIMMER_B,
-  TIMMER_R,
-  TIMMER_L
-
-=======
-  MOVE_F = 21,        // 21
-  MOVE_B,             // 22
-  MOVE_R = 7,         //  7
-  MOVE_L = 9,         //  9
-
-  LED_BLUE_B = 0,     //  0
-  LED_BLUE_S,         //  1
-  LED_GREEN_B,        //  2
-  LED_GREEN_S,        //  3
-  LED_YELLOW_B,       //  4
-  LED_YELLOW_S,       //  5
-  LED_RED_S,          //  6
-  LED_RED_B,          //  7
-
-  LED_BAT_YT = 0,     //  0
-  LED_BAT_YB,         //  1
-  LED_BAT_RT,         //  2
-  LED_BAT_RB,         //  3
+  LED_BAT_RT = 0,     //  0
+  LED_BAT_RB,         //  1
+  LED_BAT_YT,         //  2
+  LED_BAT_YB,         //  3
 
   TIMMER_F = 0,       //  0
   TIMMER_B,           //  1
   TIMMER_R,           //  2
-  TIMMER_L            //  3
+  TIMMER_L,           //  3
 
->>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
+  BAD_ERR = -11
+
 } my_enum;
+
+typedef enum {
+    NO_ERR,
+    ERR_ARG_DIR,
+    ERR_NO_ARG
+} err_enum;
 
 const int remotePowPin = 1;
 const int remoteForPin = 4;
@@ -110,3 +88,5 @@ const int batLedPins[4] = { 3, 2, 0, 7 };
 const int GPIOpins[MX_] = { 3, 2, 0, 7, 4, 5 };
 
 static const char *devName = "/dev/i2c-1";
+
+//#endif

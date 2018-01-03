@@ -1,35 +1,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 #include <unistd.h>
 #include <linux/i2c-dev.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
+
 #include <errno.h>
 #include <signal.h>
+
 #include <wiringPi.h>
-#include <pcf8574.h>
 
 #include "rc_header.h"
 
-#define PCF_8574 100
 #define MAX_MILLI 500
-
-typedef enum {
-    NO_ERR,
-    ERR_ARG_DIR,
-    ERR_NO_ARG
-} err_enum;
 
 int i2c_file_ar;
 int i2c_file_es;
 
-_Bool ledState[8] = { FALSE };
+_Bool isWeb;
 
-unsigned long lastMillisSonar = 0;
+unsigned long lastMillisSonar[4] = { 0, 0, 0, 0 };
 unsigned long lastMillisMovement[4] = { 0, 0, 0, 0 };
 
-const int durration = 2500;
+const int durration = 3500;
 
 static void die(int sig);
 
@@ -40,25 +35,24 @@ _Bool checkBat();
 
 int main(int argc, char **argv)
 {
-    int i, dir = -1, result_run = -1;
-    //_Bool errA = FALSE, errF = FALSE;
+    int i, dir = -1;
+    int result_run = -1;
     int errF = NO_ERR;
 
     (void)signal(SIGINT, die);
     (void)signal(SIGHUP, die);
     (void)signal(SIGTERM, die);
     (void)signal(SIGABRT, die);
+    uid_t uid = getuid();
+    // on my system; www-data has the user id of 33
+    isWeb = (uid == 33);
     if (argc > 1)
     {
         dir = atoi(argv[1]);
         if (dir < 0 || dir > 4)
-<<<<<<< HEAD
         {
             errF = ERR_ARG_DIR;
         }
-=======
-            errF = TRUE;
->>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     }
     else
     {
@@ -68,24 +62,15 @@ int main(int argc, char **argv)
     {
         printf("usage %s [dir]\n", argv[0]);
         printf("valid dir:\n0 - forward\n1 - backward\n2 - right\n3 - left\n4 - stop\n");
-<<<<<<< HEAD
-        printf("ERROR: ");
         if (errF == ERR_ARG_DIR) printf("Direction must be 0 through 4\n");
         else printf("Nothing entered\n");
         return EXIT_FAILURE;
     }
-=======
-        return EXIT_FAILURE;
-    }
-    if (dir != 4)
-        dir += 29;
->>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     if ((i2c_file_ar = open(devName, O_RDWR)) < 0)     { fprintf(stderr, "[Arduino] I2C: Failed to access %s\n", devName); exit(1); }
     if (ioctl(i2c_file_ar, I2C_SLAVE, ADDRESS_AR) < 0) { fprintf(stderr, "[Arduino] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_AR); exit(1); }
     if ((i2c_file_es = open(devName, O_RDWR)) < 0)     { fprintf(stderr, " [EnergyShield] I2C: Failed to access %s\n", devName); exit(1); }
     if (ioctl(i2c_file_es, I2C_SLAVE, ADDRESS_ES) < 0) { fprintf(stderr, " [EnergyShield] I2C: Failed to acquire bus access/talk to slave 0x%x\n", ADDRESS_ES); exit(1); }
     if (wiringPiSetup() == -1)                         { fprintf(stdout, " Error trying to setup wiringPi - oops: %s\n", strerror(errno)); exit(1); }
-    if (pcf8574Setup(PCF_8574, ADDRESS_8574) != 1)     { fprintf(stdout, " Error trying to setup pcf8574 - oops: %s\n", strerror(errno)); exit(1); }
     piHiPri(99);
     pinMode(remoteForPin, PUD_UP);
     digitalWrite(remoteForPin, HIGH);
@@ -106,48 +91,55 @@ int main(int argc, char **argv)
         digitalWrite(batLedPins[LED_BAT_RB], LOW);
         return EXIT_FAILURE;
     }
-<<<<<<< HEAD
-    digitalWrite(remotePowPin, HIGH);
-    delay(2000);
-=======
->>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
     if (dir != 4)
     {
+        // because OK_ == 1; there's no way to know if reverse or ok was returned.
+        dir += 30;
         while (send_I2C_Command(GO_CENTER) != CENTER_)
             ;
         checkBat();
+        if (!isWeb)
+        {
+            if (dir == MOVE_F) printf("move forward\n");
+            else if (dir == MOVE_B) printf("move reverse\n");
+        }
         switch (dir)
         {
             case MOVE_F: case MOVE_B: result_run = move(dir); break;
-<<<<<<< HEAD
             case MOVE_L: result_run = turn(GO_LEFT); break;
             case MOVE_R: result_run = turn(GO_RIGHT); break;
-=======
-            case MOVE_L: case MOVE_R: result_run = turn(dir); break;
->>>>>>> 8675f812e0eb6114ff61efa20e033284c0824f19
             default: break;
         }
         if (result_run != OK_)
-            digitalWrite(PCF_8574 + LED_RED_B, LOW);
+        {
+            printf("BLOCK ");
+            switch (result_run)
+            {
+                case MOVE_F:   printf("FRONT"); break;
+                case MOVE_B:   printf("BACK"); break;
+                case GO_LEFT:  printf("LEFT"); break;
+                case GO_RIGHT: printf("RIGHT"); break;
+                case BAD_ERR:  printf("invalid command"); break;
+                default: printf("NA %d", result_run); break;
+            }
+        }
     }
     close(i2c_file_ar);
     close(i2c_file_es);
-    digitalWrite(remotePowPin, LOW);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
-    for (i = 0; i < 9; i++)
-        digitalWrite(PCF_8574 + i, HIGH);
-    for (i = 0; i < 4; i++)
-        digitalWrite(batLedPins[i], HIGH);
     return EXIT_SUCCESS;
 }
 
 int send_I2C_Command(int u_cmd)
 {
     unsigned char cmd[16];
-    int result_write = 1, result_read = 1, ret = BAD_;
+    int result_write = 1, result_read = 1;
+    int ret = BAD_;
 
     cmd[0] = u_cmd;
+    // really hate having to spam the arduino i2c with the while (1) 
+    // but not sure why it doesn't work unless I do
     while (1)
     {
         result_write = write(i2c_file_ar, cmd, 1);
@@ -172,30 +164,26 @@ int send_I2C_Command(int u_cmd)
 
 int move(int d)
 {
-    int sonarCmd, ledColor, f_or_b, fbPin, Ret = OK_;
+    int sonarCmd, f_or_b, fbPin;
+    int Ret = OK_;
     unsigned long currentMillis;
 
-    d += 21;
-    if (d != REMOTE_FORWARD && d != REMOTE_BACKWARD)
-        return -1;
-    if (d == REMOTE_FORWARD)
+    if (d != MOVE_F && d != MOVE_B)
+        return BAD_ERR;
+    if (d == MOVE_F)
     {
         f_or_b = TIMMER_F;
         fbPin = remoteForPin;
         sonarCmd = CHECK_SONAR_CENTER;
-        ledColor = LED_GREEN_B;
     }
     else
     {
         f_or_b = TIMMER_B;
         fbPin = remoteRevPin;
         sonarCmd = CHECK_SONAR_REAR;
-        ledColor = LED_RED_B;
     }
     if (send_I2C_Command(sonarCmd) == OK_)
     {
-        lastMillisSonar = 0;
-        digitalWrite(PCF_8574 + ledColor, LOW);
         digitalWrite(fbPin, LOW);
         while (1)
         {
@@ -205,9 +193,9 @@ int move(int d)
                 lastMillisMovement[f_or_b] = currentMillis;
                 break;
             }
-            if (currentMillis - lastMillisSonar >= 5)
+            if (currentMillis - lastMillisSonar[f_or_b] >= 5)
             {
-                lastMillisSonar = currentMillis;
+                lastMillisSonar[f_or_b] = currentMillis;
                 if (send_I2C_Command(sonarCmd) != OK_)
                 {
                     Ret = d;
@@ -216,37 +204,32 @@ int move(int d)
             }
         }
         digitalWrite(fbPin, HIGH);
-        digitalWrite(PCF_8574 + ledColor, HIGH);
     }
     return Ret;
 }
 
 int turn(int d)
 {
-    int sonarCmd, thresh, ledColor, l_or_r, Ret = OK_;
+    int sonarCmd, thresh, l_or_r;
+    int Ret = OK_;
     unsigned long currentMillis;
 
     if (d != GO_RIGHT && d != GO_LEFT)
-        return -1;
+        return BAD_ERR;
     if (d == GO_RIGHT)
     {
         l_or_r = TIMMER_R;
         sonarCmd = CHECK_SONAR_RIGHT;
         thresh = FAR_RIGHT_;
-        ledColor = LED_BLUE_B;
     }
     else
     {
         l_or_r = TIMMER_L;
         sonarCmd = CHECK_SONAR_LEFT;
         thresh = FAR_LEFT_;
-        ledColor = LED_YELLOW_B;
     }
-    lastMillisSonar = 0;
-    digitalWrite(PCF_8574 + ledColor, LOW);
     while (send_I2C_Command(d) != thresh)
         ;
-    digitalWrite(PCF_8574 + LED_GREEN_B, LOW);
     digitalWrite(remoteForPin, LOW);
     while (1)
     {
@@ -254,12 +237,11 @@ int turn(int d)
         if (currentMillis - lastMillisMovement[l_or_r] >= durration)
         {
             lastMillisMovement[l_or_r] = currentMillis;
-            Ret = OK_;
             break;
         }
-        if (currentMillis - lastMillisSonar >= 5)
+        if (currentMillis - lastMillisSonar[l_or_r] >= 5)
         {
-            lastMillisSonar = currentMillis;
+            lastMillisSonar[l_or_r] = currentMillis;
             if (send_I2C_Command(sonarCmd) != OK_)
             {
                 Ret = d;
@@ -268,8 +250,6 @@ int turn(int d)
         }
     }
     digitalWrite(remoteForPin, HIGH);
-    digitalWrite(PCF_8574 + LED_GREEN_B, HIGH);
-    digitalWrite(PCF_8574 + ledColor, HIGH);
     while (send_I2C_Command(GO_CENTER) != CENTER_)
         ;
     return Ret;
@@ -304,7 +284,6 @@ static void die(int sig)
     digitalWrite(remotePowPin, LOW);
     digitalWrite(remoteForPin, HIGH);
     digitalWrite(remoteRevPin, HIGH);
-    for (i = 0; i < 9; i++) digitalWrite(PCF_8574 + i, HIGH);
     for (i = 0; i < 4; i++) digitalWrite(batLedPins[i], HIGH);
     close(i2c_file_ar);
     close(i2c_file_es);
