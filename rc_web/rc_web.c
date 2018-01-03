@@ -24,7 +24,7 @@ _Bool isWeb;
 unsigned long lastMillisSonar[4] = { 0, 0, 0, 0 };
 unsigned long lastMillisMovement[4] = { 0, 0, 0, 0 };
 
-const int durration = 3500;
+const long durration = 3500;
 
 static void die(int sig);
 
@@ -78,7 +78,6 @@ int main(int argc, char **argv)
     pinMode(remoteRevPin, PUD_UP);
     digitalWrite(remoteRevPin, HIGH);
     pinMode(remoteRevPin, OUTPUT);
-    //pinMode(remotePowPin, OUTPUT);
     if (digitalRead(remotePowPin) == LOW)
     {
         printf("NO POWER");
@@ -103,17 +102,12 @@ int main(int argc, char **argv)
         while (send_I2C_Command(GO_CENTER) != CENTER_)
             ;
         checkBat();
-        if (!isWeb)
-        {
-            if (dir == MOVE_F) printf("move forward\n");
-            else if (dir == MOVE_B) printf("move reverse\n");
-        }
         switch (dir)
         {
             case MOVE_F: case MOVE_B: result_run = move(dir); break;
             case MOVE_L: result_run = turn(GO_LEFT); break;
             case MOVE_R: result_run = turn(GO_RIGHT); break;
-            default: break;
+            default: if (!isWeb) printf("unknown dir %d\n", dir); break;
         }
         if (result_run != OK_)
         {
@@ -173,9 +167,11 @@ int move(int d)
     int Ret = OK_;
     unsigned long currentMillis;
 
-    //if ((d != MOVE_F && d != MOVE_B) || (digitalRead(remotePowPin) == LOW))
     if (d != MOVE_F && d != MOVE_B)
+    {
+        if (!isWeb) printf("bad dir: %d\n", d);
         return BAD_ERR;
+    }
     if (d == MOVE_F)
     {
         f_or_b = TIMMER_F;
@@ -201,15 +197,19 @@ int move(int d)
             }
             if (currentMillis - lastMillisSonar[f_or_b] >= 5)
             {
-                lastMillisSonar[f_or_b] = currentMillis;
                 if (send_I2C_Command(sonarCmd) != OK_)
                 {
                     Ret = d;
                     break;
                 }
+                lastMillisSonar[f_or_b] = currentMillis;
             }
         }
         digitalWrite(fbPin, HIGH);
+    }
+    else
+    {
+        Ret = d;
     }
     return Ret;
 }
@@ -220,7 +220,6 @@ int turn(int d)
     int Ret = OK_;
     unsigned long currentMillis;
 
-    //if ((d != GO_RIGHT && d != GO_LEFT) || (digitalRead(remotePowPin) == LOW))
     if (d != GO_RIGHT && d != GO_LEFT)
         return BAD_ERR;
     if (d == GO_RIGHT)
