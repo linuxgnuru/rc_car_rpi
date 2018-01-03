@@ -78,7 +78,12 @@ int main(int argc, char **argv)
     pinMode(remoteRevPin, PUD_UP);
     digitalWrite(remoteRevPin, HIGH);
     pinMode(remoteRevPin, OUTPUT);
-    pinMode(remotePowPin, OUTPUT);
+    //pinMode(remotePowPin, OUTPUT);
+    if (digitalRead(remotePowPin) == LOW)
+    {
+        printf("NO POWER");
+        return EXIT_FAILURE;
+    }
     for (i = 0; i < 4; i++)
     {
         pullUpDnControl(batLedPins[i], PUD_UP);
@@ -168,6 +173,7 @@ int move(int d)
     int Ret = OK_;
     unsigned long currentMillis;
 
+    //if ((d != MOVE_F && d != MOVE_B) || (digitalRead(remotePowPin) == LOW))
     if (d != MOVE_F && d != MOVE_B)
         return BAD_ERR;
     if (d == MOVE_F)
@@ -214,6 +220,7 @@ int turn(int d)
     int Ret = OK_;
     unsigned long currentMillis;
 
+    //if ((d != GO_RIGHT && d != GO_LEFT) || (digitalRead(remotePowPin) == LOW))
     if (d != GO_RIGHT && d != GO_LEFT)
         return BAD_ERR;
     if (d == GO_RIGHT)
