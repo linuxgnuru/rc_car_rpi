@@ -8,7 +8,13 @@ if (isset($_POST['dir'])) {
     $gp = shell_exec("gpio read 1");
     if ($gp == 1) {
       echo "[$rd";
-      $output = shell_exec("/usr/local/bin/rc_web $dir");
+      //$output = shell_exec("/usr/local/bin/rc_web $dir");
+      $cmd = "/usr/local/bin/rc_web $dir";
+      $outputfile = "/dev/shm/output.txt";
+      $pidfile = "/dev/shm/pid.txt";
+      exec(sprintf("%s > %s 2>&1 & echo $! >> %s", $cmd, $outputfile, $pidfile));
+      //try { $result = shell_exec(sprintf("ps %d", $pid)); }
+      //$output = shell_exec("/usr/local/bin/rc_web $dir");
       if ($output) {
           echo " - $output";
       }
